@@ -35,6 +35,7 @@ kern_return_t mach_vm_deallocate(mach_port_name_t target, mach_vm_address_t addr
 kern_return_t inject_dylib(mach_port_t target, char *dylib){
     kern_return_t kr = KERN_SUCCESS;
     kr = mach_port_insert_right(mach_task_self(), target, target, MACH_MSG_TYPE_COPY_SEND);
+    CHK_KR(kr, "mach_port_insert_right");
 #define STACK_SIZE (mach_vm_size_t)0x4000
     
     mach_vm_address_t remoteStack;
@@ -78,7 +79,7 @@ kern_return_t inject_dylib(mach_port_t target, char *dylib){
     CHK_KR(kr, "mach_port_allocate");
     
     kr = mach_port_insert_right(mach_task_self(), exceptionHandler, exceptionHandler, MACH_MSG_TYPE_MAKE_SEND);
-    CHK_KR(kr, "mach_port_insert_right");
+    CHK_KR(kr, "mach_port_insert_right2");
     
     kr = thread_set_exception_ports(remoteThread, EXC_MASK_BAD_ACCESS, exceptionHandler, EXCEPTION_DEFAULT | MACH_EXCEPTION_CODES, ARM_THREAD_STATE64);
     CHK_KR(kr, "thread_set_exception_ports");
