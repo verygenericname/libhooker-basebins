@@ -3,14 +3,18 @@ OUTDIR ?= bin
 
 .PHONY: all clean
 
-SUBPRJ = pspawn_payload inject_criticald3 libhooker_start libsyringe
-all: $(OUTDIR)/$(TARGET)
+SUBPRJ = pspawn_payload inject_criticald3 libhooker-starter libsyringe
+all: $(addprefix $(OUTDIR)/, $(SUBPRJ))
 
 MFLAGS = OUTDIR=$(abspath $(OUTDIR))
 
 DEBUG ?= 0
+ROOTLESS ?= 0
 ifeq ($(DEBUG), 1)
     MFLAGS += DEBUG=1
+endif
+ifeq ($(ROOTLESS), 1)
+    MFLAGS += ROOTLESS=1
 endif
 
 $(OUTDIR):

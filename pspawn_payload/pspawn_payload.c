@@ -12,6 +12,12 @@
 #include "fishhook.h"
 #include "memDebug.h"
 
+#ifdef ROOTLESS
+#define PREFIX "/var/jb"
+#else
+#define PREFIX ""
+#endif
+
 int file_exist(const char *filename) {
     struct stat buffer;
     int r = stat(filename, &buffer);
@@ -19,10 +25,10 @@ int file_exist(const char *filename) {
 }
 
 #ifdef PSPAWN_PAYLOAD_DEBUG
-#define LAUNCHD_LOG_PATH "/pspawn_payload_launchd.log"
+#define LAUNCHD_LOG_PATH PREFIX "/pspawn_payload_launchd.log"
 // XXX multiple xpcproxies opening same file
 // XXX not closing logfile before spawn
-#define XPCPROXY_LOG_PATH "/pspawn_payload_xpcproxy.log"
+#define XPCPROXY_LOG_PATH PREFIX "/pspawn_payload_xpcproxy.log"
 FILE *log_file;
 #define DEBUGLOG(fmt, args...)\
 do {\
@@ -42,8 +48,8 @@ fflush(log_file); \
 #define DEBUGLOG(fmt, args...)
 #endif
 
-#define PSPAWN_PAYLOAD_DYLIB "/usr/libexec/libhooker/pspawn_payload.dylib"
-#define SBINJECT_PAYLOAD_DYLIB "/usr/lib/TweakInject.dylib"
+#define PSPAWN_PAYLOAD_DYLIB PREFIX "/usr/libexec/libhooker/pspawn_payload.dylib"
+#define SBINJECT_PAYLOAD_DYLIB PREFIX "/usr/lib/TweakInject.dylib"
 
 // since this dylib should only be loaded into launchd and xpcproxy
 // it's safe to assume that we're in xpcproxy if getpid() != 1
@@ -316,10 +322,12 @@ static struct mach_exception mach_lookup_exception_list[] = {
 };
 #undef DECL_EXCEPTION
 
-int sandbox_check_by_audit_token(audit_token_t, const char *operation, int sandbox_filter_type, ...);
-static int (*old_sandbox_check_by_audit_token)(audit_token_t, const char *operation, int sandbox_filter_type, ...);
-static int (*old_sandbox_check_by_audit_token_broken)(audit_token_t, const char *operation, int sandbox_filter_type, ...);
-static int fake_sandbox_check_by_audit_token(audit_token_t au, const char *operation, int sandbox_filter_type, ...) {
+int sandbox_check(pid_t, const char *, int type, ...);
+static int (*old_sandbox_check)(pid_t, const char *, int type, ...);
+static int (*old_sandbox_check_broken)(pid_t, const char *, int type, ...);
+static int fake_sandbox_check(pid_t pid, const char *operation, int sandbox_filter_type, ...) {
+    DEBUGLOG("sandy box on %s", operation);
+
     int retval;
     if (!strncmp(operation, "mach-", 5)) {
         va_list a;
@@ -343,9 +351,9 @@ static int fake_sandbox_check_by_audit_token(audit_token_t au, const char *opera
         }
 
       passthru:
-        retval = old_sandbox_check_by_audit_token(au, operation, sandbox_filter_type, name);
+        retval = old_sandbox_check(pid, operation, sandbox_filter_type, name);
     } else {
-        retval = old_sandbox_check_by_audit_token(au, operation, sandbox_filter_type, NULL);
+        retval = old_sandbox_check(pid, operation, sandbox_filter_type, NULL);
     }
     return retval;
 }
@@ -355,10 +363,12 @@ static void rebind_pspawns(void) {
     old_pspawn = dlsym(libsystem, "posix_spawn");
     old_pspawnp = dlsym(libsystem, "posix_spawnp");
     old_sandbox_check_by_audit_token = dlsym(libsystem, "sandbox_check_by_audit_token");
+    old_sandbox_check = dlsym(libsystem, "sandbox_check_by_audit_token");
     struct rebinding rebindings[] = {
         {"posix_spawn", (void *)fake_posix_spawn, (void **)&old_pspawn_broken},
         {"posix_spawnp", (void *)fake_posix_spawnp, (void **)&old_pspawnp_broken},
-        {"sandbox_check_by_audit_token", (void *)fake_sandbox_check_by_audit_token, (void **)&old_sandbox_check_by_audit_token_broken}
+        //{"sandbox_check_by_audit_token", (void *)fake_sandbox_check_by_audit_token, (void **)&old_sandbox_check_by_audit_token_broken}
+        {"sandbox_check", (void *)fake_sandbox_check, (void **)&old_sandbox_check_broken}
     };
     
     rebind_symbols(rebindings, 3);
@@ -378,6 +388,7 @@ static void ctor(void) {
         pthread_create(&thd, NULL, thd_func, NULL);
     } else {
         current_process = PROCESS_XPCPROXY;
+
         rebind_pspawns();
     }
 }

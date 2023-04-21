@@ -55,6 +55,7 @@ kern_return_t inject_dylib(mach_port_t target, char *dylib){
     
     mach_port_t remoteThread;
     kr = thread_create(target, &remoteThread);
+    CHK_KR(kr, "thread_create");
     
     kr = mach_vm_write(target, remoteStack, (vm_offset_t)localStack, (mach_msg_type_number_t)STACK_SIZE);
     CHK_KR(kr, "mach_vm_write3");
@@ -99,8 +100,11 @@ kern_return_t inject_dylib(mach_port_t target, char *dylib){
     
     kr = mach_vm_deallocate(target, remoteStr, STACK_SIZE);
     CHK_KR(kr, "mach_vm_deallocate");
+
+    /*
     kr = mach_vm_deallocate(target, remoteThread, STACK_SIZE);
     CHK_KR(kr, "mach_vm_deallocate2");
+    */
     
     kr = mach_port_destroy(mach_task_self(), exceptionHandler);
     CHK_KR(kr, "mach_port_destroy");

@@ -13,7 +13,15 @@
 #define PROC_PIDPATHINFO_MAXSIZE  (1024)
 int proc_pidpath(pid_t pid, void *buffer, uint32_t buffersize);
 
-#define dylibDir @"/Library/TweakInject"
+#ifdef THEOS_PACKAGE_INSTALL_PREFIX
+#define PREFIX THEOS_PACKAGE_INSTALL_PREFIX
+#else
+#define PREFIX @""
+#endif
+
+#define dylibDirPath PREFIX "/Library/TweakInject"
+#define dylibDir @dylibDirPath
+#define NSPrefix(str) [NSString stringWithFormat:@"%@%@", @PREFIX, str]
 
 //libhooker options
 static BOOL killBackBoarddWithSpringBoard = NO;
@@ -76,7 +84,7 @@ static NSArray *sbinjectGenerateDylibList(NSString *appPath) {
                     }
                     if (kCFCoreFoundationVersionNumber >= 1600){
                         if ([entry hasPrefix:@"com.apple.UIKit"] || [entry hasSuffix:@"UI"]|| [entry hasPrefix:@"com.apple.TextInput"] || [entry hasPrefix:@"com.apple.TextEntry"]){
-                            if (![appPath hasPrefix:@"/Applications"] && ![appPath hasPrefix:@"/var/containers/Bundle/Application"] && ![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.springboard"]){
+                            if (![appPath hasPrefix:@"/Applications"] && ![appPath hasPrefix:NSPrefix(@"/Applications")] && ![appPath hasPrefix:@"/var/containers/Bundle/Application"] && ![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.springboard"]){
                                 //Should not be injecting here. Skip it
                                 continue;
                             }
@@ -141,7 +149,7 @@ static NSString *LHTemporaryDirectory(){
 
     char *env = getenv("TMPDIR");
     if (issetugid()){
-        strncpy(buf, P_tmpdir, MAXPATHLEN);
+        strncpy(buf, PREFIX P_tmpdir, MAXPATHLEN);
     } else if (env) {
         strncpy(buf, env, MAXPATHLEN);
     } else {
@@ -187,14 +195,14 @@ static NSString *LHTemporaryDirectory(){
 
 static void SigHandler(int signo, siginfo_t *info, void *uap){
     if (isSpringBoard || isBackboard){
-        FILE *f = fopen("/var/mobile/Library/.sbinjectSafeMode", "w");
+        FILE *f = fopen(PREFIX "/var/mobile/Library/.sbinjectSafeMode", "w");
         if (f){
             fprintf(f, "Hello World\n");
             fclose(f);
         }
     }
     if (processHash){
-        FILE *f = fopen([[NSString stringWithFormat:@"%@/.safeMode-%@", LHTemporaryDirectory(), processHash] UTF8String], "w");
+        FILE *f = fopen([[NSString stringWithFormat:@"%@%@/.safeMode-%@", @PREFIX, LHTemporaryDirectory(), processHash] UTF8String], "w");
         if (f){
             fprintf(f, "Hello World!\n");
             fclose(f);
@@ -339,7 +347,7 @@ NSDictionary *preferencesForExecutable(NSDictionary *preferences){
 __attribute__ ((constructor))
 static void ctor(void) {
     NSArray *dylibInjectList = nil;
-    NSDictionary *preferences = [[NSDictionary alloc] initWithContentsOfFile:@"/var/mobile/Library/Preferences/org.coolstar.libhooker.plist"];
+    NSDictionary *preferences = [[NSDictionary alloc] initWithContentsOfFile:NSPrefix(@"/var/mobile/Library/Preferences/org.coolstar.libhooker.plist")];
 
     @autoreleasepool {
         unsetenv("DYLD_INSERT_LIBRARIES");
@@ -357,7 +365,7 @@ static void ctor(void) {
                     return;
                 }
 
-                if ([pathStr hasPrefix:@"/Applications"] || [pathStr hasPrefix:@"/var/containers/Bundle/Application"]){
+                if ([pathStr hasPrefix:@"/Applications"] || [pathStr hasPrefix:NSPrefix(@"/Applications")] || [pathStr hasPrefix:@"/var/containers/Bundle/Application"]){
                     processHash = nil;
                 } else {
                     uint8_t digest[CC_SHA1_DIGEST_LENGTH];
@@ -393,11 +401,11 @@ static void ctor(void) {
                 sigaction(SIGSYS, &action, NULL);
 
                 if ([processName isEqualToString:@"backboardd"] || [NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.springboard"]){
-                    if (file_exist("/var/mobile/Library/.sbinjectSafeMode")){
+                    if (file_exist(PREFIX "/var/mobile/Library/.sbinjectSafeMode")){
                         safeMode = true;
                         if ([NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.springboard"]){
                             if (!file_exist("/var/tmp/com.apple.backboardd/.bbSafeMode")){
-                                unlink("/var/mobile/Library/.sbinjectSafeMode");
+                                unlink(PREFIX "/var/mobile/Library/.sbinjectSafeMode");
                             }
                             LHLog(OS_LOG_TYPE_FAULT, @"Entering Safe Mode!");
                             %init(SafeMode);
@@ -426,7 +434,7 @@ static void ctor(void) {
                 }
 
                 if (processHash){
-                    const char *safeModeByProcPath = [[NSString stringWithFormat:@"%@/.safeMode-%@", LHTemporaryDirectory(), processHash] UTF8String];
+                    const char *safeModeByProcPath = [[NSString stringWithFormat:@"%@%@/.safeMode-%@", @PREFIX, LHTemporaryDirectory(), processHash] UTF8String];
                     if (file_exist((char *)safeModeByProcPath)){
                         safeMode = true;
                         unlink(safeModeByProcPath);

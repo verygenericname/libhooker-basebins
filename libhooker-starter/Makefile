@@ -22,6 +22,11 @@ else
     CFLAGS += -O2
 endif
 
+ROOTLESS ?= 0
+ifeq ($(ROOTLESS), 1)
+    CFLAGS += -DROOTLESS=1
+endif
+
 all: $(OUTDIR)/$(TARGET)
 
 $(OUTDIR):

@@ -16,7 +16,7 @@ int main(int argc, char* argv[]){
 	task_t remoteTask;
 	kern_return_t kr = task_for_pid(mach_task_self(), pid, &remoteTask);
 	if (kr != KERN_SUCCESS) {
-		printf("[libhooker] Failed to get task for pid %u!\n", pid);
+		fprintf(stderr, "[libhooker] Failed to get task for pid %u!\n", pid);
 		return -1;
 	}
     
@@ -26,7 +26,7 @@ int main(int argc, char* argv[]){
     kern_return_t ret = LHInjectDylib(remoteTask, dylib, dylibArgc, dylibArgv);
 
 	if (ret != 0){
-        printf("[libhooker] Something happened!\n");
+		fprintf(stderr, "[libhooker] Error: %d (%s)!\n", ret, mach_error_string(ret));
         return ret;
 	}
 	return 0;

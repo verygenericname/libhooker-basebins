@@ -17,6 +17,11 @@ CFLAGS  = -Wall -I./apple_include
 
 all: $(OUTDIR)/$(TARGET)
 
+ROOTLESS ?= 0
+ifeq ($(ROOTLESS), 1)
+    CFLAGS += -DROOTLESS=1
+endif
+
 DEBUG ?= 0
 ifeq ($(DEBUG), 1)
     CFLAGS += -DPSPAWN_PAYLOAD_DEBUG

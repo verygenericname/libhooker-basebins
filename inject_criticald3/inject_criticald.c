@@ -27,7 +27,7 @@ int main(int argc, char* argv[]){
 	if (ret == 0){
 		fprintf(stderr, "No error occurred!\n");
 	} else {
-        fprintf(stderr, "Something happened!\n");
+        fprintf(stderr, "Error: %d (%s)!\n", ret, mach_error_string(ret));
 	}
 	return 0;
 }

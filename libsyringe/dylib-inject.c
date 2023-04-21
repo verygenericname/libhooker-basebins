@@ -57,6 +57,12 @@ if (kr != KERN_SUCCESS)\
 return kr;
 #endif
 
+#ifdef ROOTLESS
+#define PREFIX "/var/jb"
+#else
+#define PREFIX ""
+#endif
+
 kern_return_t mach_vm_allocate(vm_map_t target, mach_vm_address_t *address, mach_vm_size_t size, int flags);
 kern_return_t mach_vm_protect(vm_map_t target_task, mach_vm_address_t address, mach_vm_size_t size, boolean_t set_maximum, vm_prot_t new_protection);
 kern_return_t mach_vm_read_overwrite(vm_map_t target_task, mach_vm_address_t address, mach_vm_size_t size, mach_vm_address_t data, mach_vm_size_t *outsize);
@@ -524,7 +530,7 @@ kern_return_t LHdlsymRemote(mach_port_t target,
 
 kern_return_t LHInjectDylib(mach_port_t target, char *dylib, int argc, char *argv[]){
     return LHGetRemoteMachThread(target, ^kern_return_t (mach_port_t remoteThread, mach_port_t exceptionHandler, int64_t slideDiff){
-        return LHdlsymRemote(target, remoteThread, exceptionHandler, slideDiff, "/usr/lib/libhooker.dylib", "LHWrapFunction", ^kern_return_t(uint64_t wrapFunction) {
+        return LHdlsymRemote(target, remoteThread, exceptionHandler, slideDiff, PREFIX "/usr/lib/libhooker.dylib", "LHWrapFunction", ^kern_return_t(uint64_t wrapFunction) {
             return LHdlsymRemote(target, remoteThread, exceptionHandler, slideDiff, dylib, "MSmain0", ^kern_return_t(uint64_t funcAddr) {
                 kern_return_t kr = KERN_SUCCESS;
                 mach_vm_address_t remoteArr;
