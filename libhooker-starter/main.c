@@ -30,8 +30,8 @@ int main(){
 	printf("Starting libhooker\n");
 	int status = 0;
 	pid_t pid;
-	char *argv[] = {"inject_criticald", "1", PREFIX "/usr/libexec/libhooker/pspawn_payload.dylib", NULL};
-	posix_spawn(&pid, PREFIX "/usr/libexec/libhooker/inject_criticald", NULL, NULL, argv, environ);
+	char *argv[] = {"sinject", "1", PREFIX "/usr/libexec/libhooker/pspawn_payload.dylib", NULL};
+	posix_spawn(&pid, PREFIX "/usr/bin/sinject", NULL, NULL, argv, environ);
 	waitpid(pid, &status, 0);
 	return status;
 }
