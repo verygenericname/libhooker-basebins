@@ -326,8 +326,6 @@ int sandbox_check(pid_t, const char *, int type, ...);
 static int (*old_sandbox_check)(pid_t, const char *, int type, ...);
 static int (*old_sandbox_check_broken)(pid_t, const char *, int type, ...);
 static int fake_sandbox_check(pid_t pid, const char *operation, int sandbox_filter_type, ...) {
-    DEBUGLOG("sandy box on %s", operation);
-
     int retval;
     if (!strncmp(operation, "mach-", 5)) {
         va_list a;
@@ -362,12 +360,10 @@ static void rebind_pspawns(void) {
     void *libsystem = dlopen("/usr/lib/libSystem.B.dylib", RTLD_NOW);
     old_pspawn = dlsym(libsystem, "posix_spawn");
     old_pspawnp = dlsym(libsystem, "posix_spawnp");
-    old_sandbox_check_by_audit_token = dlsym(libsystem, "sandbox_check_by_audit_token");
-    old_sandbox_check = dlsym(libsystem, "sandbox_check_by_audit_token");
+    old_sandbox_check = dlsym(libsystem, "sandbox_check");
     struct rebinding rebindings[] = {
         {"posix_spawn", (void *)fake_posix_spawn, (void **)&old_pspawn_broken},
         {"posix_spawnp", (void *)fake_posix_spawnp, (void **)&old_pspawnp_broken},
-        //{"sandbox_check_by_audit_token", (void *)fake_sandbox_check_by_audit_token, (void **)&old_sandbox_check_by_audit_token_broken}
         {"sandbox_check", (void *)fake_sandbox_check, (void **)&old_sandbox_check_broken}
     };
     

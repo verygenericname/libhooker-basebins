@@ -1,0 +1,6 @@
+*/.theos/
+*/bin/
+*/packages/
+.theos/
+bin/
+packages/
